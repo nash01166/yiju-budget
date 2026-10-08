@@ -1,24 +1,57 @@
-import { useRef, useState, type ChangeEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, type Category, type TxType } from '../db'
+import { db, formatMoney, getBudget, setBudget, type BudgetSettings, type Category, type TxType } from '../db'
 import { daysSinceBackup, exportBackup, exportCsv, restoreBackup } from '../backup'
+import { applyTheme, getThemePref, type ThemePref } from '../theme'
+import { useToast } from '../toast'
 import CategoryEditor from '../components/CategoryEditor'
+import CatIcon from '../components/CatIcon'
 
-export default function SettingsPage() {
-  const [type, setType] = useState<TxType>('expense')
-  /** null：關閉；{}：新增；有 id：編輯 */
-  const [editing, setEditing] = useState<Partial<Category> | null>(null)
-  const [message, setMessage] = useState('')
+interface Props {
+  onBack: () => void
+}
+
+const toNumber = (s: string) => Math.max(0, Math.round(Number(s) || 0))
+
+export default function SettingsPage({ onBack }: Props) {
+  const toast = useToast()
+  const [theme, setTheme] = useState<ThemePref>(getThemePref)
+  /** null：關閉；{ type }：新增；有 id：編輯 */
+  const [editing, setEditing] = useState<(Partial<Category> & { type: TxType }) | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
-  const categories = useLiveQuery(() => db.categories.where('type').equals(type).sortBy('order'), [type])
+  const categories = useLiveQuery(() => db.categories.orderBy('order').toArray())
+  const savedBudget = useLiveQuery(() => getBudget())
   const backupDays = useLiveQuery(() => daysSinceBackup())
   const txCount = useLiveQuery(() => db.transactions.count())
 
-  async function move(index: number, delta: number) {
-    if (!categories) return
-    const a = categories[index]
-    const b = categories[index + delta]
+  // 預算欄位先放本地，離開欄位才存，打字時不會被即時更新蓋掉
+  const [draft, setDraft] = useState<{ monthly: string; categories: Record<string, string> } | null>(null)
+  useEffect(() => {
+    if (savedBudget && !draft) {
+      setDraft({
+        monthly: savedBudget.monthly ? String(savedBudget.monthly) : '',
+        categories: Object.fromEntries(Object.entries(savedBudget.categories).map(([k, v]) => [k, String(v)])),
+      })
+    }
+  }, [savedBudget, draft])
+
+  function draftToBudget(d: NonNullable<typeof draft>): BudgetSettings {
+    const cats: Record<string, number> = {}
+    for (const [k, v] of Object.entries(d.categories)) if (toNumber(v) > 0) cats[k] = toNumber(v)
+    return { monthly: toNumber(d.monthly), categories: cats }
+  }
+
+  const commitBudget = () => draft && setBudget(draftToBudget(draft))
+
+  const expenseCats = categories?.filter((c) => c.type === 'expense') ?? []
+  const incomeCats = categories?.filter((c) => c.type === 'income') ?? []
+  const budget = draft ? draftToBudget(draft) : null
+  const allocated = budget ? Object.values(budget.categories).reduce((s, v) => s + v, 0) : 0
+
+  async function move(list: Category[], index: number, delta: number) {
+    const a = list[index]
+    const b = list[index + delta]
     if (!a || !b) return
     await db.transaction('rw', db.categories, async () => {
       await db.categories.update(a.id!, { order: b.order })
@@ -26,11 +59,16 @@ export default function SettingsPage() {
     })
   }
 
+  function changeTheme(t: ThemePref) {
+    setTheme(t)
+    applyTheme(t)
+  }
+
   async function run(action: () => Promise<boolean>, done: string) {
     try {
-      if (await action()) setMessage(done)
+      if (await action()) toast(done)
     } catch (e) {
-      setMessage('失敗：' + (e as Error).message)
+      toast('失敗：' + (e as Error).message)
     }
   }
 
@@ -41,57 +79,118 @@ export default function SettingsPage() {
     if (!confirm('還原會用備份檔「覆蓋」目前所有的帳目和分類，確定嗎？')) return
     try {
       const n = await restoreBackup(file)
-      setMessage(`已還原 ${n} 筆帳目`)
+      setDraft(null)
+      toast(`已還原 ${n} 筆帳目`)
     } catch (err) {
-      setMessage('還原失敗：' + (err as Error).message)
+      toast('還原失敗：' + (err as Error).message)
     }
   }
 
   const backupText =
     backupDays == null ? '還沒有備份過' : backupDays === 0 ? '今天已備份' : `上次備份：${backupDays} 天前`
 
-  return (
-    <div className="page settings">
-      <h2>分類</h2>
-      <div className="segmented">
-        <button className={type === 'expense' ? 'on' : ''} onClick={() => setType('expense')}>支出</button>
-        <button className={type === 'income' ? 'on' : ''} onClick={() => setType('income')}>收入</button>
-      </div>
-
-      <ul className="cat-list">
-        {categories?.map((c, i) => (
-          <li key={c.id}>
-            <button className="cat-main" onClick={() => setEditing(c)}>
+  const catList = (list: Category[]) => (
+    <ul className="cat-list">
+      {list.map((c, i) => (
+        <li key={c.id}>
+          <button className="cat-main" onClick={() => setEditing(c)}>
+            <CatIcon name={c.name} color={c.color} size={30} />
+            <div>
               <span>{c.name}</span>
               {c.keywords && c.keywords.length > 0 && <small>{c.keywords.join('、')}</small>}
-            </button>
-            <button aria-label="往上移" disabled={i === 0} onClick={() => move(i, -1)}>▲</button>
-            <button aria-label="往下移" disabled={i === categories.length - 1} onClick={() => move(i, 1)}>▼</button>
-          </li>
-        ))}
-      </ul>
-      <button className="primary" onClick={() => setEditing({})}>＋ 新增{type === 'expense' ? '支出' : '收入'}分類</button>
-      <p className="muted small">點分類可以改名、設定關鍵字或刪除。報表顏色依這裡的順序，前 8 個各有顏色。</p>
+            </div>
+          </button>
+          <button aria-label="往上移" disabled={i === 0} onClick={() => move(list, i, -1)}>▲</button>
+          <button aria-label="往下移" disabled={i === list.length - 1} onClick={() => move(list, i, 1)}>▼</button>
+        </li>
+      ))}
+    </ul>
+  )
 
-      <h2>資料</h2>
-      <p className="muted small">共 {txCount ?? 0} 筆帳目・{backupText}</p>
+  return (
+    <div className="page settings">
+      <h2>預算</h2>
+      {draft && budget && (
+        <div className="card">
+          <label className="budget-input">
+            <span>每月總預算</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              placeholder="例如 20000"
+              value={draft.monthly}
+              onChange={(e) => setDraft({ ...draft, monthly: e.target.value })}
+              onBlur={commitBudget}
+            />
+          </label>
+          <p className="muted small">每月 1 號重新計算，沒花完的不會累積到下個月。</p>
+
+          <div className="card-head"><strong>分類預算</strong><span className="muted small">留空表示不限</span></div>
+          <ul className="budget-list">
+            {expenseCats.map((c) => (
+              <li key={c.id}>
+                <CatIcon name={c.name} color={c.color} size={28} />
+                <span>{c.name}</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  placeholder="不限"
+                  value={draft.categories[c.name] ?? ''}
+                  onChange={(e) => setDraft({ ...draft, categories: { ...draft.categories, [c.name]: e.target.value } })}
+                  onBlur={commitBudget}
+                />
+              </li>
+            ))}
+          </ul>
+          {budget.monthly > 0 && (
+            <p className={'small ' + (allocated > budget.monthly ? 'expense' : 'muted')}>
+              已分配 {formatMoney(allocated)} · {allocated > budget.monthly
+                ? `超過總預算 ${formatMoney(allocated - budget.monthly)}`
+                : `未分配 ${formatMoney(budget.monthly - allocated)}`}
+            </p>
+          )}
+        </div>
+      )}
+
+      <h2>支出分類</h2>
+      {catList(expenseCats)}
+      <button className="primary" onClick={() => setEditing({ type: 'expense' })}>＋ 新增支出分類</button>
+
+      <h2>收入分類</h2>
+      {catList(incomeCats)}
+      <button className="primary" onClick={() => setEditing({ type: 'income' })}>＋ 新增收入分類</button>
+      <p className="muted small">點分類可以改名、換顏色、設定一句話記帳的關鍵字，或刪除。</p>
+
+      <h2>外觀</h2>
+      <div className="segmented three">
+        {(['system', 'light', 'dark'] as const).map((t) => (
+          <button key={t} className={theme === t ? 'on' : ''} onClick={() => changeTheme(t)}>
+            {t === 'system' ? '跟隨系統' : t === 'light' ? '淺色' : '深色'}
+          </button>
+        ))}
+      </div>
+      <p className="muted small">只影響這台裝置。</p>
+
+      <h2>備份</h2>
+      <p className="muted small">共 {txCount ?? 0} 筆帳目 · {backupText}</p>
       <div className="action-list">
         <button onClick={() => run(exportBackup, '備份完成')}>💾 備份（存到「檔案」或 iCloud）</button>
         <button onClick={() => fileInput.current?.click()}>📂 從備份檔還原</button>
         <button onClick={() => run(exportCsv, 'CSV 已匯出')}>📄 匯出 CSV（可用 Excel 開啟）</button>
       </div>
       <input ref={fileInput} type="file" accept=".json,application/json" hidden onChange={onRestoreFile} />
-      {message && <p className="notice">{message}</p>}
+      <p className="muted small">資料只存在這支手機的這個 App 裡。換手機或清除 Safari 資料前，請先備份。</p>
 
-      <p className="muted small">
-        資料只存在這支手機的這個 App 裡。換手機或清除 Safari 資料前，請先備份。
-      </p>
+      <button className="primary" onClick={onBack}>回到首頁</button>
 
       {editing && (
         <CategoryEditor
           initial={editing.id ? (editing as Category) : undefined}
-          type={type}
-          onClose={() => setEditing(null)}
+          type={editing.type}
+          onClose={() => {
+            setEditing(null)
+            setDraft(null) // 分類改名或刪除會搬移分類預算，重新讀取
+          }}
         />
       )}
     </div>

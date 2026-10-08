@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, type Category, type TxType } from '../db'
+import { CATEGORY_PALETTE, db, pickColor, renameBudgetCategory, type Category, type TxType } from '../db'
+import CatIcon from './CatIcon'
 
 interface Props {
   /** 有 id 為編輯，否則為新增 */
@@ -18,9 +19,11 @@ export default function CategoryEditor({ initial, type, onClose }: Props) {
   const [keywords, setKeywords] = useState((initial?.keywords ?? []).join('、'))
   const [moveTo, setMoveTo] = useState('')
   const [error, setError] = useState('')
+  const [chosenColor, setChosenColor] = useState(initial?.color ?? '')
 
   const all = useLiveQuery(() => db.categories.toArray())
   const siblings = all?.filter((c) => c.type === type && c.id !== initial?.id) ?? []
+  const color = chosenColor || pickColor(siblings.map((c) => c.color))
   // 刪除時帳目預設移到「其他」／「其他收入」
   const defaultTarget =
     siblings.find((c) => c.name === '其他' || c.name === '其他收入')?.name ?? siblings[0]?.name ?? ''
@@ -36,20 +39,27 @@ export default function CategoryEditor({ initial, type, onClose }: Props) {
     const kw = parseKeywords(keywords)
 
     if (!initial?.id) {
-      const maxOrder = Math.max(-1, ...(all ?? []).filter((c) => c.type === type).map((c) => c.order))
-      await db.categories.add({ type, name: trimmed, order: maxOrder + 1, keywords: kw })
+      // 新分類插在「其他」前面
+      const same = (all ?? []).filter((c) => c.type === type).sort((a, b) => a.order - b.order)
+      const other = same.find((c) => c.name === '其他' || c.name === '其他收入')
+      const order = other ? other.order : (same[same.length - 1]?.order ?? -1) + 1
+      await db.transaction('rw', db.categories, async () => {
+        for (const c of same) if (c.order >= order) await db.categories.update(c.id!, { order: c.order + 1 })
+        await db.categories.add({ type, name: trimmed, order, keywords: kw, color })
+      })
       return onClose()
     }
 
     const oldName = initial.name
     await db.transaction('rw', db.categories, db.transactions, db.learned, async () => {
-      await db.categories.update(initial.id!, { name: trimmed, keywords: kw })
+      await db.categories.update(initial.id!, { name: trimmed, keywords: kw, color })
       if (oldName !== trimmed) {
         // 改名時，已記的帳目與學過的品項一起改
         await db.transactions.where('category').equals(oldName).modify({ category: trimmed })
         await db.learned.filter((l) => l.category === oldName).modify({ category: trimmed })
       }
     })
+    if (oldName !== trimmed) await renameBudgetCategory(oldName, trimmed)
     onClose()
   }
 
@@ -66,6 +76,7 @@ export default function CategoryEditor({ initial, type, onClose }: Props) {
       await db.learned.filter((l) => l.category === initial.name).modify({ category: target })
       await db.categories.delete(initial.id!)
     })
+    await renameBudgetCategory(initial.name, null)
     onClose()
   }
 
@@ -80,8 +91,32 @@ export default function CategoryEditor({ initial, type, onClose }: Props) {
 
         <label className="field">
           <span>名稱</span>
-          <input value={name} onChange={(e) => { setName(e.target.value); setError('') }} autoFocus={!initial} />
+          <div className="name-row">
+            <CatIcon name={name || '?'} color={color} />
+            <input
+              value={name}
+              maxLength={8}
+              placeholder="例如 寵物"
+              onChange={(e) => { setName(e.target.value); setError('') }}
+              autoFocus={!initial}
+            />
+          </div>
         </label>
+
+        <div className="field">
+          <span>顏色</span>
+          <div className="swatches">
+            {CATEGORY_PALETTE.map((c) => (
+              <button
+                key={c}
+                className={c === color ? 'on' : ''}
+                style={{ background: c }}
+                aria-label={`顏色 ${c}`}
+                onClick={() => setChosenColor(c)}
+              />
+            ))}
+          </div>
+        </div>
 
         <label className="field">
           <span>關鍵字（用頓號或空白隔開）</span>

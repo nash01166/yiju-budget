@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { parseSentence, type CategoryRef } from './parser'
 
 const CATS: CategoryRef[] = [
-  ...['餐飲', '飲料零食', '交通', '購物', '日用品', '居住', '通訊網路', '娛樂', '醫療', '教育', '人情社交', '其他'].map(
+  ...['餐飲', '飲料零食', '交通', '購物', '日用品', '居住', '通訊網路', '娛樂', '醫療', '教育', '人情社交', '訂閱', '其他'].map(
     (name) => ({ name, type: 'expense' as const }),
   ),
   ...['薪資', '獎金', '投資', '其他收入'].map((name) => ({ name, type: 'income' as const })),
@@ -59,6 +59,10 @@ describe('parseSentence', () => {
 
   it('數字在前', () => {
     expect(parse('150 牛肉麵')[0]).toMatchObject({ note: '牛肉麵', amount: 150, category: '餐飲' })
+  })
+
+  it('訂閱服務', () => {
+    expect(parse('Netflix 390、iCloud 90').map((i) => i.category)).toEqual(['訂閱', '訂閱'])
   })
 
   it('認不出來就歸其他', () => {

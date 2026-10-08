@@ -1,10 +1,13 @@
-// 產生 App 圖示 PNG（青綠底 + 白色帳本），不依賴外部套件
+// 產生 App 圖示 PNG（奶油底 + 布丁），不依賴外部套件
 // 用法：node scripts/make-icons.mjs
 import { writeFileSync } from 'node:fs'
 import { deflateSync } from 'node:zlib'
 
-const BG = [15, 157, 138]
-const WHITE = [255, 255, 255]
+const BG = [251, 243, 217]
+const CUSTARD = [246, 208, 107]
+const CARAMEL = [154, 78, 42]
+const PLATE = [235, 221, 186]
+const INK = [58, 39, 27]
 
 function crc32(buf) {
   let c, crc = 0xffffffff
@@ -28,19 +31,23 @@ function chunk(type, data) {
 function pixel(x, y, s) {
   // 以 0..1 的座標描述圖形
   const u = x / s, v = y / s
-  // 帳本本體（圓角矩形）
-  const left = 0.26, right = 0.74, top = 0.2, bottom = 0.8, r = 0.05
-  const inX = u >= left && u <= right, inY = v >= top && v <= bottom
-  if (inX && inY) {
-    const cx = Math.min(Math.max(u, left + r), right - r)
-    const cy = Math.min(Math.max(v, top + r), bottom - r)
-    if ((u - cx) ** 2 + (v - cy) ** 2 > r * r) return BG
-    // 帳本上的橫線
-    for (const ly of [0.36, 0.48, 0.6]) {
-      if (v >= ly && v <= ly + 0.035 && u >= 0.34 && u <= 0.66) return BG
-    }
-    return WHITE
+  // 眼睛
+  for (const ex of [0.42, 0.58]) {
+    if ((u - ex) ** 2 + (v - 0.6) ** 2 < 0.028 ** 2) return INK
   }
+  // 布丁本體：上窄下寬的梯形
+  const top = 0.3, bottom = 0.78
+  if (v >= top && v <= bottom) {
+    const t = (v - top) / (bottom - top)
+    const half = 0.2 + t * 0.09
+    if (Math.abs(u - 0.5) <= half) {
+      // 焦糖頂部，下緣有波浪
+      const wave = 0.43 + 0.025 * Math.sin(u * Math.PI * 10)
+      return v < wave ? CARAMEL : CUSTARD
+    }
+  }
+  // 盤子
+  if (((u - 0.5) / 0.38) ** 2 + ((v - 0.8) / 0.06) ** 2 <= 1) return PLATE
   return BG
 }
 
