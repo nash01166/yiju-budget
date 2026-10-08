@@ -18,6 +18,10 @@ export interface Category {
   type: TxType
   name: string
   order: number
+  /** 使用者自訂的關鍵字，一句話記帳時品項含有就歸到這個分類 */
+  keywords?: string[]
+  /** 內建分類的原始名稱；改名後仍沿用內建關鍵字 */
+  builtin?: string
 }
 
 export interface Setting {
@@ -52,14 +56,24 @@ const DEFAULT_CATEGORIES: Record<TxType, string[]> = {
   expense: ['餐飲', '飲料零食', '交通', '購物', '日用品', '居住', '通訊網路', '娛樂', '醫療', '教育', '人情社交', '其他'],
   income: ['薪資', '獎金', '投資', '其他收入'],
 }
+const BUILTIN_NAMES = new Set([...DEFAULT_CATEGORIES.expense, ...DEFAULT_CATEGORIES.income])
+
+// 第 3 步之前建立的內建分類補上 builtin，之後改名才不會失去內建關鍵字
+db.version(3).stores({}).upgrade((tx) =>
+  tx.table('categories').toCollection().modify((c: Category) => {
+    if (BUILTIN_NAMES.has(c.name)) c.builtin = c.name
+  }),
+)
 
 db.on('populate', (tx) => {
   const rows: Category[] = []
   for (const type of ['expense', 'income'] as const) {
-    DEFAULT_CATEGORIES[type].forEach((name, order) => rows.push({ type, name, order }))
+    DEFAULT_CATEGORIES[type].forEach((name, order) => rows.push({ type, name, order, builtin: name }))
   }
   tx.table('categories').bulkAdd(rows)
 })
+
+export const LAST_BACKUP_KEY = 'lastBackupAt'
 
 /** 本地時區的 YYYY-MM-DD */
 export function toDateString(d: Date): string {

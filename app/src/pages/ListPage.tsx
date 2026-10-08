@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, formatMoney, monthOf, monthRange, shiftMonth, today, type Transaction } from '../db'
+import { db, formatMoney, monthOf, monthRange, today, type Transaction } from '../db'
 import TxList from '../components/TxList'
+import MonthSwitch from '../components/MonthSwitch'
 
 interface Props {
   onSelect: (tx: Transaction) => void
@@ -18,15 +19,10 @@ export default function ListPage({ onSelect }: Props) {
 
   const income = txs?.filter((t) => t.type === 'income').reduce((s, t) => s + t.amount, 0) ?? 0
   const expense = txs?.filter((t) => t.type === 'expense').reduce((s, t) => s + t.amount, 0) ?? 0
-  const [y, m] = month.split('-').map(Number)
 
   return (
     <div className="page">
-      <div className="month-switch">
-        <button onClick={() => setMonth(shiftMonth(month, -1))}>‹</button>
-        <strong>{y} 年 {m} 月</strong>
-        <button onClick={() => setMonth(shiftMonth(month, 1))}>›</button>
-      </div>
+      <MonthSwitch month={month} onChange={setMonth} />
 
       <div className="totals">
         <div><span>收入</span><strong className="income">{formatMoney(income)}</strong></div>

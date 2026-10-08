@@ -69,6 +69,16 @@ describe('parseSentence', () => {
     expect(parse('阿明 500', new Map([['阿明', '人情社交']]))[0].category).toBe('人情社交')
   })
 
+  it('自訂分類：分類名稱與自訂關鍵字', () => {
+    const cats: CategoryRef[] = [...CATS, { name: '寵物', type: 'expense', keywords: ['飼料', '獸醫'] }]
+    expect(parseSentence('貓飼料 800、寵物美容 1200', TODAY, cats).map((i) => i.category)).toEqual(['寵物', '寵物'])
+  })
+
+  it('內建分類改名後仍沿用內建關鍵字', () => {
+    const cats = CATS.map((c) => (c.name === '餐飲' ? { ...c, name: '吃飯', builtin: '餐飲' } : c))
+    expect(parseSentence('午餐 100', TODAY, cats)[0].category).toBe('吃飯')
+  })
+
   it('沒有金額就不產生帳目', () => {
     expect(parse('今天好累')).toEqual([])
   })

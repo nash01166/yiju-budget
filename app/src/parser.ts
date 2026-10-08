@@ -12,6 +12,8 @@ export interface ParsedItem {
 export interface CategoryRef {
   name: string
   type: TxType
+  keywords?: string[]
+  builtin?: string
 }
 
 /** 內建關鍵字：品項含有關鍵字就歸到該分類，最長的關鍵字優先 */
@@ -115,11 +117,12 @@ export function guessCategory(
 
   const lower = note.toLowerCase()
   let best: { cat: CategoryRef; len: number } | null = null
-  for (const [catName, words] of Object.entries(KEYWORDS)) {
-    const cat = valid.get(catName)
-    if (!cat) continue
-    for (const w of words) {
-      if (lower.includes(w) && (!best || w.length > best.len)) best = { cat, len: w.length }
+  for (const cat of categories) {
+    // 內建關鍵字 + 自訂關鍵字 + 分類名稱本身
+    const words = [...(KEYWORDS[cat.builtin ?? cat.name] ?? []), ...(cat.keywords ?? []), cat.name]
+    for (const raw of words) {
+      const w = raw.trim().toLowerCase()
+      if (w && lower.includes(w) && (!best || w.length > best.len)) best = { cat, len: w.length }
     }
   }
   return best?.cat ?? fallback

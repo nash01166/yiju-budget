@@ -8,6 +8,16 @@
   --income: #1f9d55;
   --expense: #d64545;
   --tabbar-h: 56px;
+  /* 圖表分類色（已驗證色盲辨識度的固定順序） */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #4a3aa7;
+  --series-8: #e34948;
+  --series-rest: #a3a29c;
   color-scheme: light dark;
   font-family: -apple-system, 'PingFang TC', 'Noto Sans TC', system-ui, sans-serif;
 }
@@ -22,6 +32,15 @@
     --accent: #2ec4b0;
     --income: #34c76f;
     --expense: #ff6b6b;
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
+    --series-4: #c98500;
+    --series-5: #d55181;
+    --series-6: #008300;
+    --series-7: #9085e9;
+    --series-8: #e66767;
+    --series-rest: #6b6a65;
   }
 }
 
@@ -156,3 +175,59 @@ input { font: inherit; font-size: 16px; color: inherit; }
 .chip.on { background: var(--accent); color: #fff; border-color: var(--accent); }
 
 .danger { color: var(--expense); padding: 12px; background: var(--card); border-radius: 12px; }
+
+.muted { color: var(--muted); }
+.small { font-size: 13px; margin: 0 4px; }
+.notice { margin: 0 4px; font-size: 14px; color: var(--accent); }
+.field select, .inline select {
+  padding: 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card);
+  font: inherit; font-size: 16px; color: inherit;
+}
+.inline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14px; }
+
+.backup-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 14px;
+}
+.backup-banner button { color: var(--accent); font-weight: 700; white-space: nowrap; }
+
+/* 報表 */
+.donut-wrap { position: relative; width: 220px; max-width: 70vw; margin: 4px auto; }
+.donut { display: block; width: 100%; height: auto; }
+.donut path { cursor: pointer; transition: opacity 0.15s; }
+.donut-center {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  pointer-events: none; text-align: center;
+}
+.donut-center span { font-size: 13px; color: var(--muted); }
+.donut-center strong { font-size: 22px; }
+
+.breakdown { list-style: none; margin: 0; padding: 0; background: var(--card); border-radius: 12px; overflow: hidden; }
+.breakdown li {
+  display: grid; grid-template-columns: 12px 1fr auto auto; align-items: center; column-gap: 10px; row-gap: 6px;
+  padding: 12px 14px; border-bottom: 1px solid var(--line); cursor: pointer; transition: opacity 0.15s;
+}
+.breakdown li:last-child { border-bottom: none; }
+.breakdown li.dim { opacity: 0.4; }
+.breakdown .dot { width: 10px; height: 10px; border-radius: 50%; }
+.breakdown .name { font-weight: 600; }
+.breakdown .pct { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+.breakdown .amt { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.breakdown .bar { grid-column: 2 / -1; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.breakdown .bar span { display: block; height: 100%; border-radius: 2px; }
+
+/* 設定 */
+.cat-list { list-style: none; margin: 0; padding: 0; background: var(--card); border-radius: 12px; overflow: hidden; }
+.cat-list li { display: flex; align-items: center; border-bottom: 1px solid var(--line); }
+.cat-list li:last-child { border-bottom: none; }
+.cat-list .cat-main {
+  flex: 1; min-width: 0; text-align: left; padding: 12px 14px; display: flex; flex-direction: column; gap: 2px;
+}
+.cat-list .cat-main small {
+  color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cat-list li > button:not(.cat-main) { width: 40px; height: 44px; color: var(--muted); font-size: 12px; }
+
+.action-list { display: flex; flex-direction: column; background: var(--card); border-radius: 12px; overflow: hidden; }
+.action-list button { text-align: left; padding: 14px; border-bottom: 1px solid var(--line); }
+.action-list button:last-child { border-bottom: none; }

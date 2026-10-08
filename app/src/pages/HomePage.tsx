@@ -4,6 +4,7 @@ import { db, formatMoney, monthOf, monthRange, today, type Transaction } from '.
 import { parseSentence, type ParsedItem } from '../parser'
 import TxList from '../components/TxList'
 import ConfirmCard from '../components/ConfirmCard'
+import { daysSinceBackup, exportBackup } from '../backup'
 
 interface Props {
   onAdd: () => void
@@ -29,6 +30,24 @@ export default function HomePage({ onAdd, onSelect }: Props) {
 
   const categories = useLiveQuery(() => db.categories.orderBy('order').toArray())
 
+  // 有帳目且超過 7 天沒備份（或從沒備份過）就提醒
+  const backupDue = useLiveQuery(async () => {
+    if ((await db.transactions.count()) === 0) return null
+    const days = await daysSinceBackup()
+    if (days === null) return '還沒有備份過資料'
+    return days >= 7 ? `已經 ${days} 天沒備份了` : null
+  })
+  const [backupError, setBackupError] = useState('')
+
+  async function backupNow() {
+    try {
+      await exportBackup()
+      setBackupError('')
+    } catch (e) {
+      setBackupError('備份失敗：' + (e as Error).message)
+    }
+  }
+
   async function submit(e: FormEvent) {
     e.preventDefault()
     if (!text.trim() || !categories) return
@@ -53,6 +72,14 @@ export default function HomePage({ onAdd, onSelect }: Props) {
         <span>本月支出</span>
         <strong>{formatMoney(monthExpense ?? 0)}</strong>
       </div>
+
+      {backupDue && (
+        <div className="backup-banner">
+          <span>⚠️ {backupDue}</span>
+          <button onClick={backupNow}>立即備份</button>
+        </div>
+      )}
+      {backupError && <p className="hint">{backupError}</p>}
 
       {parsed && categories ? (
         <ConfirmCard items={parsed} categories={categories} onDone={finish} />

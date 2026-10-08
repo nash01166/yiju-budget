@@ -2,6 +2,8 @@ import { useState } from 'react'
 import type { Transaction } from './db'
 import HomePage from './pages/HomePage'
 import ListPage from './pages/ListPage'
+import ReportPage from './pages/ReportPage'
+import SettingsPage from './pages/SettingsPage'
 import TxForm from './components/TxForm'
 
 type Tab = 'home' | 'list' | 'report' | 'settings'
@@ -26,8 +28,8 @@ export default function App() {
       <main>
         {tab === 'home' && <HomePage onAdd={openNew} onSelect={openEdit} />}
         {tab === 'list' && <ListPage onSelect={openEdit} />}
-        {tab === 'report' && <div className="page"><p className="empty">報表將在第 3 步完成</p></div>}
-        {tab === 'settings' && <div className="page"><p className="empty">設定將在第 3 步完成</p></div>}
+        {tab === 'report' && <ReportPage />}
+        {tab === 'settings' && <SettingsPage />}
       </main>
 
       <nav className="tabbar">
