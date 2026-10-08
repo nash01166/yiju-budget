@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseSentence, type CategoryRef } from './parser'
+import { matchCategory, parseSentence, type CategoryRef } from './parser'
 
 const CATS: CategoryRef[] = [
   ...['餐飲', '飲料零食', '交通', '購物', '日用品', '居住', '通訊網路', '娛樂', '醫療', '教育', '人情社交', '訂閱', '其他'].map(
@@ -81,6 +81,12 @@ describe('parseSentence', () => {
   it('內建分類改名後仍沿用內建關鍵字', () => {
     const cats = CATS.map((c) => (c.name === '餐飲' ? { ...c, name: '吃飯', builtin: '餐飲' } : c))
     expect(parseSentence('午餐 100', TODAY, cats)[0].category).toBe('吃飯')
+  })
+
+  it('matchCategory：命中回傳分類，沒命中回傳 null', () => {
+    expect(matchCategory('丼飯', CATS, new Map())?.name).toBe('餐飲')
+    expect(matchCategory('阿明', CATS, new Map())).toBeNull()
+    expect(matchCategory('', CATS, new Map())).toBeNull()
   })
 
   it('沒有金額就不產生帳目', () => {

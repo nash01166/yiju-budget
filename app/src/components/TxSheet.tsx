@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, formatMoney, today, type Category, type Transaction, type TxType } from '../db'
 import { useToast } from '../toast'
+import { matchCategory } from '../parser'
 import CatIcon from './CatIcon'
 
 interface Props {
@@ -28,7 +29,12 @@ export default function TxSheet({ initial, onClose }: Props) {
   const [shake, setShake] = useState(false)
 
   const categories = useLiveQuery(() => db.categories.where('type').equals(type).sortBy('order'), [type])
+  const learned = useLiveQuery(async () => new Map((await db.learned.toArray()).map((l) => [l.note, l.category])))
   const amount = Number(digits || '0')
+
+  // 備註打品項時，用一句話記帳同一套判斷找出建議分類，排到第一個並亮起來
+  const suggested = !editing && categories && learned ? matchCategory(note.trim(), categories, learned) : null
+  const ordered = suggested && categories ? [suggested, ...categories.filter((c) => c.id !== suggested.id)] : categories
 
   const press = useCallback((key: string) => {
     setDigits((d) => {
@@ -121,8 +127,13 @@ export default function TxSheet({ initial, onClose }: Props) {
         </div>
 
         <div className="cat-grid">
-          {categories?.map((c) => (
-            <button key={c.id} className={c.name === category ? 'on' : ''} onClick={() => pick(c)}>
+          {ordered?.map((c) => (
+            <button
+              key={c.id}
+              className={(c.name === category ? 'on' : '') + (c.id === suggested?.id ? ' suggested' : '')}
+              onClick={() => pick(c)}
+            >
+              {c.id === suggested?.id && <em className="suggest-tag">建議</em>}
               <CatIcon name={c.name} color={c.color} size={40} />
               <span>{c.name}</span>
             </button>
@@ -143,7 +154,9 @@ export default function TxSheet({ initial, onClose }: Props) {
             <button className="strong" onClick={() => save(category)} disabled={!category}>儲存</button>
           </div>
         ) : (
-          <p className="sheet-hint">輸入金額後點分類，就會自動存好</p>
+          <p className="sheet-hint">
+            {suggested ? `建議分類：${suggested.name}，點一下就存好` : '輸入金額後點分類，就會自動存好'}
+          </p>
         )}
       </div>
     </div>

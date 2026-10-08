@@ -224,6 +224,12 @@ input, select { font: inherit; font-size: 16px; color: inherit; }
 .cat-grid button { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 2px; border-radius: 12px; font-size: 12px; }
 .cat-grid button span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cat-grid button.on { background: var(--accent-soft); font-weight: 700; }
+.cat-grid button { position: relative; }
+.cat-grid button.suggested { background: var(--accent-soft); box-shadow: inset 0 0 0 2px var(--accent); font-weight: 700; }
+.suggest-tag {
+  position: absolute; top: -6px; right: -2px; z-index: 1; font-style: normal; font-size: 10px; font-weight: 800;
+  padding: 1px 6px; border-radius: 99px; background: var(--accent); color: var(--on-accent);
+}
 .cat-grid button:active { transform: scale(0.94); }
 
 .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }

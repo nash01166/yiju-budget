@@ -113,14 +113,25 @@ export function guessCategory(
   categories: CategoryRef[],
   learned: Map<string, string>,
 ): CategoryRef {
+  const fallback =
+    categories.find((c) => c.name === '其他') ?? categories.find((c) => c.type === 'expense') ?? categories[0]
+  return matchCategory(note, categories, learned) ?? fallback
+}
+
+/** 依學過的品項與關鍵字找分類；都沒命中回傳 null */
+export function matchCategory<T extends CategoryRef>(
+  note: string,
+  categories: T[],
+  learned: Map<string, string>,
+): T | null {
   const valid = new Map(categories.map((c) => [c.name, c]))
-  const fallback = valid.get('其他') ?? categories.find((c) => c.type === 'expense') ?? categories[0]
+  if (!note.trim()) return null
 
   const remembered = learned.get(note)
   if (remembered && valid.has(remembered)) return valid.get(remembered)!
 
   const lower = note.toLowerCase()
-  let best: { cat: CategoryRef; len: number } | null = null
+  let best: { cat: T; len: number } | null = null
   for (const cat of categories) {
     // 內建關鍵字 + 自訂關鍵字 + 分類名稱本身
     const words = [...(KEYWORDS[cat.builtin ?? cat.name] ?? []), ...(cat.keywords ?? []), cat.name]
@@ -129,7 +140,7 @@ export function guessCategory(
       if (w && lower.includes(w) && (!best || w.length > best.len)) best = { cat, len: w.length }
     }
   }
-  return best?.cat ?? fallback
+  return best?.cat ?? null
 }
 
 /**
