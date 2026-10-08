@@ -4,8 +4,10 @@ import { db, formatMoney, getBudget, setBudget, type BudgetSettings, type Catego
 import { daysSinceBackup, exportBackup, exportCsv, restoreBackup } from '../backup'
 import { applyTheme, getThemePref, type ThemePref } from '../theme'
 import { useToast } from '../toast'
+import { clearMascot, getMascot, setMascot } from '../mascot'
 import CategoryEditor from '../components/CategoryEditor'
 import CatIcon from '../components/CatIcon'
+import Pudding from '../components/Pudding'
 
 interface Props {
   onBack: () => void
@@ -19,6 +21,8 @@ export default function SettingsPage({ onBack }: Props) {
   /** null：關閉；{ type }：新增；有 id：編輯 */
   const [editing, setEditing] = useState<(Partial<Category> & { type: TxType }) | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
+  const mascotInput = useRef<HTMLInputElement>(null)
+  const hasMascot = useLiveQuery(async () => (await getMascot()) !== null)
 
   const categories = useLiveQuery(() => db.categories.orderBy('order').toArray())
   const savedBudget = useLiveQuery(() => getBudget())
@@ -69,6 +73,18 @@ export default function SettingsPage({ onBack }: Props) {
       if (await action()) toast(done)
     } catch (e) {
       toast('失敗：' + (e as Error).message)
+    }
+  }
+
+  async function onMascotFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    try {
+      await setMascot(file)
+      toast('已換上新的角色圖')
+    } catch (err) {
+      toast((err as Error).message)
     }
   }
 
@@ -170,6 +186,23 @@ export default function SettingsPage({ onBack }: Props) {
         ))}
       </div>
       <p className="muted small">只影響這台裝置。</p>
+
+      <div className="card mascot-card">
+        <Pudding size={64} />
+        <div className="mascot-actions">
+          <strong>角色圖</strong>
+          <span className="muted small">換成你自己的圖片，只存在這支手機，不會上傳。</span>
+          <div className="mascot-buttons">
+            <button className="link" onClick={() => mascotInput.current?.click()}>選擇圖片</button>
+            {hasMascot && (
+              <button className="link" onClick={() => clearMascot().then(() => toast('已恢復預設布丁'))}>
+                恢復預設布丁
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+      <input ref={mascotInput} type="file" accept="image/*" hidden onChange={onMascotFile} />
 
       <h2>備份</h2>
       <p className="muted small">共 {txCount ?? 0} 筆帳目 · {backupText}</p>

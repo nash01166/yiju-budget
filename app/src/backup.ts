@@ -1,4 +1,4 @@
-import { db, LAST_BACKUP_KEY, today, type Category, type Learned, type Transaction } from './db'
+import { db, LAST_BACKUP_KEY, pickColor, today, type Category, type Learned, type Setting, type Transaction } from './db'
 
 interface BackupFile {
   app: 'yiju-budget'
@@ -7,6 +7,8 @@ interface BackupFile {
   transactions: Transaction[]
   categories: Category[]
   learned: Learned[]
+  /** 預算、自訂角色圖等設定；舊版備份沒有這個欄位 */
+  settings?: Setting[]
 }
 
 /**
@@ -41,6 +43,7 @@ export async function exportBackup(): Promise<boolean> {
     transactions: await db.transactions.toArray(),
     categories: await db.categories.toArray(),
     learned: await db.learned.toArray(),
+    settings: (await db.settings.toArray()).filter((s) => s.key !== LAST_BACKUP_KEY),
   }
   const ok = await saveFile(`一句記帳備份-${today()}.json`, JSON.stringify(data), 'application/json')
   if (ok) await db.settings.put({ key: LAST_BACKUP_KEY, value: String(Date.now()) })
@@ -58,11 +61,25 @@ export async function restoreBackup(file: File): Promise<number> {
   if (data.app !== 'yiju-budget' || !Array.isArray(data.transactions) || !Array.isArray(data.categories)) {
     throw new Error('這不是一句記帳的備份檔')
   }
-  await db.transaction('rw', db.transactions, db.categories, db.learned, async () => {
+  // 舊版備份的分類沒有顏色，補上
+  const used: string[] = []
+  const categories = data.categories.map((c) => {
+    const color = c.color ?? pickColor(used)
+    used.push(color)
+    return { ...c, color }
+  })
+  await db.transaction('rw', [db.transactions, db.categories, db.learned, db.settings], async () => {
     await Promise.all([db.transactions.clear(), db.categories.clear(), db.learned.clear()])
     await db.transactions.bulkAdd(data.transactions)
-    await db.categories.bulkAdd(data.categories)
+    await db.categories.bulkAdd(categories)
     await db.learned.bulkAdd(data.learned ?? [])
+    if (data.settings) {
+      // 有設定才覆蓋；舊版備份保留目前的預算等設定
+      const lastBackup = await db.settings.get(LAST_BACKUP_KEY)
+      await db.settings.clear()
+      await db.settings.bulkPut(data.settings.filter((s) => s.key !== LAST_BACKUP_KEY))
+      if (lastBackup) await db.settings.put(lastBackup)
+    }
   })
   return data.transactions.length
 }

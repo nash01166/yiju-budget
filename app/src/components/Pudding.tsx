@@ -1,5 +1,17 @@
-/** 自繪的布丁插圖（不使用任何角色版權圖） */
-export default function Pudding({ size = 40, mood = 'happy' }: { size?: number; mood?: 'happy' | 'worried' }) {
+import { useLiveQuery } from 'dexie-react-hooks'
+import { getMascot } from '../mascot'
+
+interface Props {
+  size?: number
+  mood?: 'happy' | 'worried'
+}
+
+/** 角色圖：有自訂圖片就用使用者的圖，否則用自繪的布丁（不使用任何角色版權圖） */
+export default function Pudding({ size = 40, mood = 'happy' }: Props) {
+  const mascot = useLiveQuery(() => getMascot())
+  if (mascot) {
+    return <img src={mascot} width={size} height={size} alt="" className="mascot" />
+  }
   return (
     <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true" className="pudding">
       <ellipse cx="32" cy="56" rx="26" ry="5" fill="var(--plate)" />
