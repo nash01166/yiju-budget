@@ -25,16 +25,27 @@ export interface Setting {
   value: string
 }
 
+/** 一句話記帳學到的「品項 → 分類」 */
+export interface Learned {
+  note: string
+  category: string
+}
+
 export const db = new Dexie('yiju-budget') as Dexie & {
   transactions: EntityTable<Transaction, 'id'>
   categories: EntityTable<Category, 'id'>
   settings: EntityTable<Setting, 'key'>
+  learned: EntityTable<Learned, 'note'>
 }
 
 db.version(1).stores({
   transactions: '++id, date, type, category',
   categories: '++id, type, order',
   settings: 'key',
+})
+
+db.version(2).stores({
+  learned: 'note',
 })
 
 const DEFAULT_CATEGORIES: Record<TxType, string[]> = {

@@ -27,7 +27,7 @@ export default function App() {
         {tab === 'home' && <HomePage onAdd={openNew} onSelect={openEdit} />}
         {tab === 'list' && <ListPage onSelect={openEdit} />}
         {tab === 'report' && <div className="page"><p className="empty">報表將在第 3 步完成</p></div>}
-        {tab === 'settings' && <div className="page"><p className="empty">設定將在第 2 步完成</p></div>}
+        {tab === 'settings' && <div className="page"><p className="empty">設定將在第 3 步完成</p></div>}
       </main>
 
       <nav className="tabbar">

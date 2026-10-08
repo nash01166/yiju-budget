@@ -50,9 +50,35 @@ input { font: inherit; font-size: 16px; color: inherit; }
 }
 .summary-card strong { font-size: 32px; }
 
-.ai-box input {
-  width: 100%; padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--card);
+.quick-box { display: flex; gap: 8px; }
+.quick-box input {
+  flex: 1; min-width: 0; padding: 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--card);
 }
+.quick-box button {
+  padding: 0 18px; border-radius: 12px; background: var(--accent); color: #fff; font-weight: 600;
+}
+.hint { margin: -4px 4px 0; font-size: 13px; color: var(--expense); }
+
+.confirm-card {
+  background: var(--card); border: 2px solid var(--accent); border-radius: 16px; padding: 12px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.confirm-head { display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px; }
+.confirm-item {
+  display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 12px; background: var(--bg);
+}
+.confirm-item .row { display: flex; gap: 6px; align-items: center; }
+.confirm-item input, .confirm-item select {
+  padding: 10px; border-radius: 8px; border: 1px solid var(--line); background: var(--card);
+  font: inherit; font-size: 16px; color: inherit; min-width: 0;
+}
+.confirm-item .note, .confirm-item select, .confirm-item input[type='date'] { flex: 1; }
+.confirm-item .amount { width: 96px; text-align: right; font-weight: 700; color: var(--expense); }
+.confirm-item .amount.income { color: var(--income); }
+.confirm-item .remove { width: 36px; height: 36px; color: var(--muted); font-size: 16px; }
+.confirm-actions { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
+.confirm-actions button { padding: 12px; border-radius: 12px; background: var(--bg); }
+.confirm-actions .strong { background: var(--accent); color: #fff; font-weight: 700; }
 
 .primary {
   background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px;
