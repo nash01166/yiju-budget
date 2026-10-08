@@ -308,6 +308,8 @@ input, select { font: inherit; font-size: 16px; color: inherit; }
 .trend-summary span { font-size: 12px; color: var(--muted); }
 .trend-summary strong { font-family: var(--font-num); font-size: 15px; }
 
+.version { text-align: center; }
+
 /* 角色圖 */
 .mascot { object-fit: contain; display: block; }
 .mascot-card { flex-direction: row; align-items: center; gap: 14px; }

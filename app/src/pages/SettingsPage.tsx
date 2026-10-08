@@ -168,15 +168,6 @@ export default function SettingsPage({ onBack }: Props) {
         </div>
       )}
 
-      <h2>支出分類</h2>
-      {catList(expenseCats)}
-      <button className="primary" onClick={() => setEditing({ type: 'expense' })}>＋ 新增支出分類</button>
-
-      <h2>收入分類</h2>
-      {catList(incomeCats)}
-      <button className="primary" onClick={() => setEditing({ type: 'income' })}>＋ 新增收入分類</button>
-      <p className="muted small">點分類可以改名、換顏色、設定一句話記帳的關鍵字，或刪除。</p>
-
       <h2>外觀</h2>
       <div className="segmented three">
         {(['system', 'light', 'dark'] as const).map((t) => (
@@ -204,6 +195,15 @@ export default function SettingsPage({ onBack }: Props) {
       </div>
       <input ref={mascotInput} type="file" accept="image/*" hidden onChange={onMascotFile} />
 
+      <h2>支出分類</h2>
+      {catList(expenseCats)}
+      <button className="primary" onClick={() => setEditing({ type: 'expense' })}>＋ 新增支出分類</button>
+
+      <h2>收入分類</h2>
+      {catList(incomeCats)}
+      <button className="primary" onClick={() => setEditing({ type: 'income' })}>＋ 新增收入分類</button>
+      <p className="muted small">點分類可以改名、換顏色、設定一句話記帳的關鍵字，或刪除。</p>
+
       <h2>備份</h2>
       <p className="muted small">共 {txCount ?? 0} 筆帳目 · {backupText}</p>
       <div className="action-list">
@@ -215,6 +215,7 @@ export default function SettingsPage({ onBack }: Props) {
       <p className="muted small">資料只存在這支手機的這個 App 裡。換手機或清除 Safari 資料前，請先備份。</p>
 
       <button className="primary" onClick={onBack}>回到首頁</button>
+      <p className="muted small version">版本 {__APP_VERSION__}</p>
 
       {editing && (
         <CategoryEditor
